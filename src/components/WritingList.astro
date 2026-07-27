@@ -1,0 +1,183 @@
+---
+import { getPosts, formatDate, type Post } from '~/lib/posts';
+
+interface Props {
+  /** Omit to render every post (used by /writing). */
+  limit?: number;
+  /** The homepage renders the numbered section chrome; /writing does not. */
+  showSectionHead?: boolean;
+}
+
+const { limit, showSectionHead = true } = Astro.props;
+
+const all: Post[] = await getPosts();
+const posts = typeof limit === 'number' ? all.slice(0, limit) : all;
+const hasMore = typeof limit === 'number' && all.length > limit;
+---
+
+<section id="writing" class={showSectionHead ? 'section' : ''}>
+  <div class="grid">
+    {
+      showSectionHead && (
+        <div class="col-full section-head">
+          <span class="section-num">04</span>
+          <h2 class="section-title">Writing</h2>
+        </div>
+      )
+    }
+
+    {
+      posts.length === 0 ? (
+        <p class="col-text muted wr-empty" data-reveal>
+          Nothing published yet. If DENIM teaches me anything worth writing
+          down &mdash; and a delay FIFO running at 100&nbsp;Gb/s seems likely to
+          &mdash; it will show up here.
+        </p>
+      ) : (
+        <ol class="col-full wr-list">
+          {posts.map((post, i) => (
+            <li class="wr-item" data-reveal style={`--reveal-delay: ${i * 60}ms`}>
+              <a
+                class="wr-link"
+                href={post.data.external ?? `/writing/${post.id}`}
+                {...(post.data.external
+                  ? { target: '_blank', rel: 'noopener noreferrer' }
+                  : {})}
+              >
+                <span class="label wr-date">
+                  <time datetime={post.data.date.toISOString()}>
+                    {formatDate(post.data.date)}
+                  </time>
+                  {post.data.source && <span class="wr-source">{post.data.source}</span>}
+                </span>
+                <span class="wr-body">
+                  <span class="wr-title">{post.data.title}</span>
+                  <span class="wr-desc muted">{post.data.description}</span>
+                </span>
+                <span class="wr-arrow" aria-hidden="true">
+                  {post.data.external ? '↗' : '→'}
+                </span>
+              </a>
+            </li>
+          ))}
+        </ol>
+      )
+    }
+
+    {
+      hasMore && (
+        <p class="col-full wr-more" data-reveal>
+          <a class="link-static" href="/writing">
+            All {all.length} posts &rarr;
+          </a>
+        </p>
+      )
+    }
+  </div>
+</section>
+
+<style>
+  .wr-empty {
+    font-size: var(--t-sm);
+    max-width: var(--measure);
+  }
+
+  .wr-list {
+    list-style: none;
+    padding: 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  .wr-item {
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .wr-link {
+    display: grid;
+    grid-template-columns: 10rem 1fr auto;
+    gap: var(--gutter);
+    align-items: baseline;
+    padding-block: 1.5rem;
+    position: relative;
+    transition: padding-left var(--dur) var(--ease);
+  }
+
+  .wr-link::before {
+    content: '';
+    position: absolute;
+    left: -0.75rem;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--accent);
+    transform: scaleY(0);
+    transform-origin: center;
+    transition: transform var(--dur) var(--ease);
+  }
+
+  .wr-link:hover::before,
+  .wr-link:focus-visible::before {
+    transform: scaleY(1);
+  }
+
+  .wr-date {
+    padding-top: 0.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .wr-source {
+    color: var(--fg-faint);
+  }
+
+  .wr-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .wr-title {
+    font-size: var(--t-md);
+    letter-spacing: -0.022em;
+    transition: color var(--dur) var(--ease);
+  }
+
+  .wr-link:hover .wr-title,
+  .wr-link:focus-visible .wr-title {
+    color: var(--accent);
+  }
+
+  .wr-desc {
+    font-size: var(--t-sm);
+    line-height: 1.5;
+    max-width: var(--measure);
+  }
+
+  .wr-arrow {
+    color: var(--fg-faint);
+    transition: transform var(--dur) var(--ease), color var(--dur) var(--ease);
+  }
+
+  .wr-link:hover .wr-arrow,
+  .wr-link:focus-visible .wr-arrow {
+    transform: translateX(0.25rem);
+    color: var(--accent);
+  }
+
+  .wr-more {
+    margin-top: 2rem;
+    font-size: var(--t-sm);
+  }
+
+  @media (max-width: 60rem) {
+    .wr-link {
+      grid-template-columns: 1fr auto;
+      gap: 0.5rem var(--gutter);
+    }
+    .wr-date {
+      grid-column: 1 / -1;
+      padding-top: 0;
+    }
+  }
+</style>

@@ -1,0 +1,192 @@
+---
+/**
+ * Pulse.
+ *
+ * Rings bloom where the pointer has been. Each one is dropped at a fixed
+ * point, expands, thins and fades over about two thirds of a second, and is
+ * never moved again — so instead of something chasing the cursor, you leave a
+ * wake of circles opening behind you.
+ *
+ * Where trail is one continuous line and reads as speed, this reads as
+ * rhythm: rings are emitted per unit of distance travelled, so moving faster
+ * spaces them further apart rather than making more of them.
+ *
+ * Deliberately quiet: hairline strokes that peak well under half opacity and
+ * ramp on rather than snapping in, so a ring crossing a project card is not
+ * competing with that card's own hover highlight, or with the text under it.
+ *
+ * Per frame: radius, width and opacity for the handful of live rings. Centres
+ * are written once, at emit.
+ *
+ * Off under prefers-reduced-motion.
+ */
+
+const RINGS = 16;
+---
+
+<div class="pu" data-pu aria-hidden="true">
+  <svg class="pu-svg">
+    {Array.from({ length: RINGS }).map(() => <circle class="pu-ring" r="0" opacity="0" />)}
+  </svg>
+</div>
+
+<style>
+  .pu {
+    position: fixed;
+    inset: 0;
+    z-index: 88;
+    pointer-events: none;
+    contain: strict;
+  }
+
+  .pu-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .pu-ring {
+    fill: none;
+    stroke: var(--accent);
+  }
+
+  /* Dark ground gets the full value. On light, the same red at the same alpha
+     reads considerably louder against white, so it is pulled back. Touch is
+     handled in the script instead, where it can compose with this rather than
+     fight it on specificity. */
+  .pu-svg {
+    opacity: 1;
+  }
+
+  :root[data-theme='light'] .pu-svg {
+    opacity: 0.9;
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme='dark']) .pu-svg {
+      opacity: 0.9;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pu {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  const root = document.querySelector<HTMLElement>('[data-pu]');
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  if (root && !reduced.matches) {
+    const rings = [...root.querySelectorAll<SVGCircleElement>('.pu-ring')].map((el) => ({
+      el,
+      born: 0,
+      alive: false,
+    }));
+
+    // Density, not opacity, is what made this loud: at 34px spacing a brisk
+    // sweep asked for ~23 rings at once against a pool of 14, so it recycled
+    // constantly and read as a cloud. Wide spacing buys the alpha back.
+    const LIFE = 660; // ms from bloom to gone
+    const EMIT = 84; // px of travel between rings
+    const R0 = 5; // starting radius
+    const R1 = 76; // final radius
+    const W0 = 2.6; // stroke width at birth
+    // Floor the width: below about a pixel a stroke stops reading as a line at
+    // all, so the old taper to 0.3 made most of a ring's life invisible on a
+    // dark ground however high the alpha was.
+    const WMIN = 1.2;
+    const FADE_IN = 0.1; // fraction of life spent arriving, so it never pops
+
+    // Quieter under a finger, where it fires on every scroll.
+    const PEAK = 0.95 * (window.matchMedia('(pointer: coarse)').matches ? 0.7 : 1);
+
+    let lx = 0;
+    let ly = 0;
+    let seeded = false;
+    let running = false;
+
+    const emit = (x: number, y: number) => {
+      // Oldest ring is recycled when the pool is full; at this lifetime and
+      // spacing you would have to move implausibly fast to notice.
+      const ring =
+        rings.find((r) => !r.alive) ??
+        rings.reduce((a, b) => (a.born <= b.born ? a : b));
+      ring.el.setAttribute('cx', x.toFixed(1));
+      ring.el.setAttribute('cy', y.toFixed(1));
+      ring.born = performance.now();
+      ring.alive = true;
+    };
+
+    const frame = (now: number) => {
+      let any = false;
+      for (const r of rings) {
+        if (!r.alive) continue;
+        const t = (now - r.born) / LIFE;
+        if (t >= 1) {
+          r.alive = false;
+          r.el.setAttribute('opacity', '0');
+          continue;
+        }
+        // Ease out: the ring leaps open, then drifts to a stop.
+        const e = 1 - (1 - t) ** 2.2;
+        r.el.setAttribute('r', (R0 + (R1 - R0) * e).toFixed(1));
+        r.el.setAttribute('stroke-width', (WMIN + (W0 - WMIN) * (1 - t)).toFixed(2));
+        // Ramp on quickly rather than starting at full strength, then decay
+        // linearly — the old 1.6 exponent dumped most of the alpha in the first
+        // third of the life, so a ring was faint for most of the time it was up.
+        const a = Math.min(1, t / FADE_IN) * (1 - t);
+        r.el.setAttribute('opacity', (PEAK * a).toFixed(3));
+        any = true;
+      }
+      if (any) {
+        requestAnimationFrame(frame);
+      } else {
+        running = false;
+        root.dataset.on = 'false';
+      }
+    };
+
+    const wake = () => {
+      root.dataset.on = 'true';
+      if (running) return;
+      running = true;
+      requestAnimationFrame(frame);
+    };
+
+    const moveTo = (x: number, y: number) => {
+      if (!seeded) {
+        lx = x;
+        ly = y;
+        seeded = true;
+        return;
+      }
+      // Emitting per unit of distance rather than per unit of time is what
+      // keeps the spacing even whatever speed the pointer is moving at.
+      if (Math.hypot(x - lx, y - ly) < EMIT) return;
+      emit(x, y);
+      lx = x;
+      ly = y;
+      wake();
+    };
+
+    window.addEventListener(
+      'pointermove',
+      (e) => {
+        if (e.pointerType !== 'mouse') return;
+        moveTo(e.clientX, e.clientY);
+      },
+      { passive: true },
+    );
+
+    // Touch: pointer events get cancelled once a drag becomes a scroll.
+    const onTouch = (e: TouchEvent) => {
+      const t = e.touches[0];
+      if (t) moveTo(t.clientX, t.clientY);
+    };
+    window.addEventListener('touchstart', onTouch, { passive: true });
+    window.addEventListener('touchmove', onTouch, { passive: true });
+  }
+</script>

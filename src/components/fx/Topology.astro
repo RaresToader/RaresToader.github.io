@@ -1,0 +1,341 @@
+---
+/**
+ * Topology — PARKED. Not imported anywhere, so none of this ships.
+ *
+ * Kept because it was the other effect worth having. To bring it back, swap
+ * the Pulse import in src/layouts/Base.astro for this one; it needs no other
+ * change, and the two are interchangeable.
+ *
+ * Nodes sit on a lattice aligned to the column grid. The pointer peers with the
+ * nearest few over hairlines, and packets travel out along each link, so what
+ * is on screen is a small network being continuously rebuilt. Chosen because
+ * the person whose site this is spent two years standing up BGP sessions.
+ *
+ * Works on phones too. A touch drag is the input there, and since scrolling a
+ * phone *is* a finger drag, the network simply follows your thumb as you read
+ * and fades once you stop. Fewer, shorter links on narrow screens, and the
+ * whole thing sits at lower opacity so it never fights the text.
+ *
+ * The lattice is anchored to the document, not the viewport: scrolling slides
+ * it past the cursor and the links re-form as it goes. It stays a fixed number
+ * of DOM nodes regardless of page length — every row is identical, so the whole
+ * group is translated by `scrollY % ROW` and wraps seamlessly.
+ *
+ * Per frame: one transform on the node group, six line endpoints, six packet
+ * positions, and the opacity of the couple of dozen nodes within reach.
+ *
+ * Off entirely under prefers-reduced-motion.
+ */
+
+const LINKS = 6;
+---
+
+<div class="tp" data-tp aria-hidden="true">
+  <svg class="tp-svg">
+    <g data-tp-lines>
+      {Array.from({ length: LINKS }).map(() => <line x1="0" y1="0" x2="0" y2="0" />)}
+    </g>
+    <g data-tp-nodes></g>
+    <g data-tp-packets>
+      {Array.from({ length: LINKS }).map(() => <circle class="tp-packet" r="1.75" />)}
+    </g>
+    <circle class="tp-hub" data-tp-hub r="3" />
+  </svg>
+</div>
+
+<style>
+  .tp {
+    position: fixed;
+    inset: 0;
+    z-index: 88;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 450ms var(--ease);
+    contain: strict;
+  }
+
+  .tp[data-on='true'] {
+    opacity: 1;
+  }
+
+  /* Quieter on touch: it rides along with every scroll there, so it has to sit
+     further back from the text than it does under a deliberate cursor. */
+  @media (pointer: coarse) {
+    .tp[data-on='true'] {
+      opacity: 0.72;
+    }
+  }
+
+  .tp-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .tp-svg line {
+    stroke: var(--accent);
+    stroke-width: 1;
+  }
+
+  .tp-packet {
+    fill: var(--accent);
+  }
+
+  /* The pointer end of the star — an unfilled ring, so it reads as the hub
+     rather than just another node. */
+  .tp-hub {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 1;
+    opacity: 0.5;
+  }
+
+  /* :global is required — nodes are created with createElementNS at run time,
+     so they never receive Astro's scoping attribute and a scoped rule would
+     silently miss them. Opacity is written per frame for the few in range. */
+  .tp-svg :global(.tp-node) {
+    fill: var(--accent);
+    opacity: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tp {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  const root = document.querySelector<HTMLElement>('[data-tp]');
+  const lineGroup = document.querySelector<SVGGElement>('[data-tp-lines]');
+  const nodeGroup = document.querySelector<SVGGElement>('[data-tp-nodes]');
+  const packetGroup = document.querySelector<SVGGElement>('[data-tp-packets]');
+  const hub = document.querySelector<SVGCircleElement>('[data-tp-hub]');
+
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  if (root && lineGroup && nodeGroup && packetGroup && hub && !reduced.matches) {
+    const NS = 'http://www.w3.org/2000/svg';
+    const ROW = 96; // px between lattice rows
+    const SPEED = 0.55; // packet traversals per second
+    const IDLE = 2600; // ms of stillness before it fades out
+
+    const lines = [...lineGroup.querySelectorAll('line')];
+    const packets = [...packetGroup.querySelectorAll('circle')];
+
+    type Node = { x: number; baseY: number; el: SVGCircleElement };
+    let nodes: Node[] = [];
+    let lit = new Set<SVGCircleElement>();
+
+    // Narrow screens get a smaller, sparser network — six long links across a
+    // 390px phone would be a thicket rather than an accent.
+    let reach = 270;
+    let maxLinks = lines.length;
+    const tune = () => {
+      const narrow = window.innerWidth < 640;
+      reach = narrow ? Math.min(190, window.innerWidth * 0.55) : 270;
+      maxLinks = narrow ? 4 : lines.length;
+    };
+
+    // Read the real grid geometry off a throwaway element, so the lattice lands
+    // on the same columns the content is set on.
+    const columnCentres = () => {
+      const probe = document.createElement('div');
+      probe.className = 'grid';
+      probe.style.cssText =
+        'position:absolute;visibility:hidden;pointer-events:none;top:0;left:0';
+      for (let i = 0; i < 12; i++) probe.appendChild(document.createElement('span'));
+      document.body.appendChild(probe);
+      const xs = [...probe.children].map((c) => {
+        const r = (c as HTMLElement).getBoundingClientRect();
+        return r.left + r.width / 2;
+      });
+      probe.remove();
+      return xs;
+    };
+
+    const layout = () => {
+      nodeGroup.replaceChildren();
+      nodes = [];
+      const xs = columnCentres();
+      // One spare row top and bottom so the wrap never shows an edge.
+      const rows = Math.ceil(window.innerHeight / ROW) + 2;
+
+      for (const x of xs) {
+        for (let r = -1; r < rows; r++) {
+          const el = document.createElementNS(NS, 'circle');
+          el.setAttribute('class', 'tp-node');
+          el.setAttribute('cx', String(x));
+          el.setAttribute('cy', String(r * ROW + ROW / 2));
+          el.setAttribute('r', '1.5');
+          nodeGroup.appendChild(el);
+          nodes.push({ x, baseY: r * ROW + ROW / 2, el });
+        }
+      }
+    };
+
+    let cx = -9999;
+    let cy = -9999;
+    let seen = false;
+    let running = false;
+    let lastT = 0;
+    let idleAt = 0;
+
+    // Packet progress along its link, staggered so they do not move in step.
+    const phase = packets.map((_, i) => i / packets.length);
+
+    const clear = () => {
+      for (const el of lit) el.style.opacity = '0';
+      lit = new Set();
+      for (const p of packets) p.style.opacity = '0';
+      for (const l of lines) l.style.opacity = '0';
+      hub.style.opacity = '0';
+    };
+
+    const frame = (now: number) => {
+      const dt = lastT ? Math.min((now - lastT) / 1000, 0.05) : 0;
+      lastT = now;
+
+      if (now > idleAt) {
+        running = false;
+        lastT = 0;
+        root.dataset.on = 'false';
+        clear();
+        return;
+      }
+
+      // Anchor the lattice to the document: every row is identical, so sliding
+      // by the remainder gives an endless field for a fixed node count.
+      const offset = window.scrollY % ROW;
+      nodeGroup.setAttribute('transform', `translate(0,${-offset})`);
+
+      // Nearest `maxLinks` nodes within reach, in one pass over the lattice.
+      const near: { d: number; x: number; y: number; el: SVGCircleElement }[] = [];
+      const nextLit = new Set<SVGCircleElement>();
+
+      for (const n of nodes) {
+        const y = n.baseY - offset;
+        const dx = n.x - cx;
+        const dy = y - cy;
+        const d2 = dx * dx + dy * dy;
+        if (d2 > reach * reach) continue;
+
+        const t = 1 - Math.sqrt(d2) / reach;
+        n.el.style.opacity = (t * 0.55).toFixed(3);
+        nextLit.add(n.el);
+
+        if (near.length < maxLinks) {
+          near.push({ d: d2, x: n.x, y, el: n.el });
+          near.sort((a, b) => a.d - b.d);
+        } else if (d2 < near[maxLinks - 1].d) {
+          near[maxLinks - 1] = { d: d2, x: n.x, y, el: n.el };
+          near.sort((a, b) => a.d - b.d);
+        }
+      }
+
+      for (const el of lit) if (!nextLit.has(el)) el.style.opacity = '0';
+      lit = nextLit;
+
+      lines.forEach((ln, i) => {
+        const hit = near[i];
+        const pk = packets[i];
+
+        if (!hit) {
+          ln.style.opacity = '0';
+          pk.style.opacity = '0';
+          return;
+        }
+
+        // Closer peers get a stronger session.
+        const strength = 1 - Math.sqrt(hit.d) / reach;
+        ln.setAttribute('x1', String(cx));
+        ln.setAttribute('y1', String(cy));
+        ln.setAttribute('x2', String(hit.x));
+        ln.setAttribute('y2', String(hit.y));
+        ln.style.opacity = (0.1 + strength * 0.4).toFixed(3);
+        hit.el.style.opacity = (0.55 + strength * 0.4).toFixed(3);
+
+        // Packet rides out from the hub to the peer.
+        phase[i] = (phase[i] + dt * SPEED) % 1;
+        const t = phase[i];
+        pk.setAttribute('cx', String(cx + (hit.x - cx) * t));
+        pk.setAttribute('cy', String(cy + (hit.y - cy) * t));
+        // Fade in and out so packets appear to leave and arrive.
+        pk.style.opacity = (Math.sin(t * Math.PI) * strength * 0.9).toFixed(3);
+      });
+
+      hub.setAttribute('cx', String(cx));
+      hub.setAttribute('cy', String(cy));
+      hub.style.opacity = '0.5';
+
+      requestAnimationFrame(frame);
+    };
+
+    const wake = () => {
+      idleAt = performance.now() + IDLE;
+      if (running) return;
+      running = true;
+      root.dataset.on = 'true';
+      requestAnimationFrame(frame);
+    };
+
+    const moveTo = (x: number, y: number) => {
+      cx = x;
+      cy = y;
+      seen = true;
+      wake();
+    };
+
+    tune();
+    layout();
+
+    window.addEventListener(
+      'resize',
+      () => {
+        clear();
+        tune();
+        layout();
+      },
+      { passive: true },
+    );
+
+    // Mouse.
+    window.addEventListener(
+      'pointermove',
+      (e) => {
+        if (e.pointerType !== 'mouse') return;
+        moveTo(e.clientX, e.clientY);
+      },
+      { passive: true },
+    );
+
+    // Touch. Pointer events get cancelled once a drag turns into a scroll, so
+    // these are the raw touch events — which keep firing the whole way.
+    const onTouch = (e: TouchEvent) => {
+      const t = e.touches[0];
+      if (t) moveTo(t.clientX, t.clientY);
+    };
+    window.addEventListener('touchstart', onTouch, { passive: true });
+    window.addEventListener('touchmove', onTouch, { passive: true });
+
+    // Scrolling counts as movement: the lattice slides under a still pointer,
+    // so the links genuinely change even though nothing was moved by hand.
+    window.addEventListener(
+      'scroll',
+      () => {
+        if (seen) wake();
+      },
+      { passive: true },
+    );
+
+    // Mouse only: a touch pointer "leaves" the moment a finger lifts, so
+    // without the guard every tap would wake the effect and kill it again in
+    // the same gesture.
+    document.addEventListener('pointerleave', (e) => {
+      if (e.pointerType === 'mouse') idleAt = 0;
+    });
+    window.addEventListener('blur', () => {
+      idleAt = 0;
+    });
+  }
+</script>

@@ -1,0 +1,105 @@
+---
+// Cycles light → dark → system. The current mode is announced via aria-label
+// and the icon swaps with pure CSS off the root's data-theme attribute.
+---
+
+<button
+  type="button"
+  class="tt"
+  data-theme-toggle
+  aria-label="Switch colour theme"
+  title="Theme: follows your system (click to change)"
+>
+  <svg class="tt-icon tt-sun" viewBox="0 0 24 24" aria-hidden="true">
+    <circle cx="12" cy="12" r="4.25"></circle>
+    <path d="M12 2.5v2.4M12 19.1v2.4M4.22 4.22l1.7 1.7M18.08 18.08l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.22 19.78l1.7-1.7M18.08 5.92l1.7-1.7"></path>
+  </svg>
+  <svg class="tt-icon tt-moon" viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M20.5 14.3A8.6 8.6 0 0 1 9.7 3.5a8.6 8.6 0 1 0 10.8 10.8Z"></path>
+  </svg>
+  <svg class="tt-icon tt-auto" viewBox="0 0 24 24" aria-hidden="true">
+    <circle cx="12" cy="12" r="8.5"></circle>
+    <path d="M12 3.5v17A8.5 8.5 0 0 0 12 3.5Z" fill="currentColor" stroke="none"></path>
+  </svg>
+</button>
+
+<style>
+  .tt {
+    display: grid;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    flex-shrink: 0;
+    background: transparent;
+    border: 1px solid var(--rule);
+    border-radius: 50%;
+    color: var(--fg-muted);
+    cursor: pointer;
+    transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease),
+      transform var(--dur) var(--ease);
+  }
+
+  .tt:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+    transform: rotate(15deg);
+  }
+
+  .tt-icon {
+    grid-area: 1 / 1;
+    width: 1.0625rem;
+    height: 1.0625rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    display: none;
+  }
+
+  /* No explicit choice yet → following the system. */
+  :global(html:not([data-theme='light']):not([data-theme='dark'])) .tt-auto {
+    display: block;
+  }
+  :global(html[data-theme='light']) .tt-sun {
+    display: block;
+  }
+  :global(html[data-theme='dark']) .tt-moon {
+    display: block;
+  }
+</style>
+
+<script>
+  const btn = document.querySelector<HTMLButtonElement>('[data-theme-toggle]');
+  const root = document.documentElement;
+
+  const LABELS: Record<string, string> = {
+    '': 'Theme: follows your system (click to change)',
+    light: 'Theme: light (click to change)',
+    dark: 'Theme: dark (click to change)',
+  };
+
+  const sync = () => {
+    if (btn) btn.title = LABELS[root.dataset.theme || ''] ?? LABELS[''];
+  };
+
+  btn?.addEventListener('click', () => {
+    const current = root.dataset.theme || '';
+    // system → light → dark → system
+    const next = current === '' ? 'light' : current === 'light' ? 'dark' : '';
+    if (next) {
+      root.dataset.theme = next;
+    } else {
+      delete root.dataset.theme;
+    }
+    try {
+      if (next) localStorage.setItem('theme', next);
+      else localStorage.removeItem('theme');
+    } catch (e) {
+      /* private mode — the choice just will not persist */
+    }
+    sync();
+  });
+
+  sync();
+</script>

@@ -1,0 +1,292 @@
+---
+import { render } from 'astro:content';
+import Base from '~/layouts/Base.astro';
+import { getPosts, formatDate, type Post } from '~/lib/posts';
+import { site } from '~/data/site';
+
+export async function getStaticPaths() {
+  const posts = await getPosts();
+  // Externally published work has no page here — the listing links straight out.
+  return posts
+    .filter((post) => !post.data.external)
+    .map((post) => ({
+      params: { slug: post.id },
+      props: { post },
+    }));
+}
+
+interface Props {
+  post: Post;
+}
+
+const { post } = Astro.props;
+const { Content, headings } = await render(post);
+---
+
+<Base
+  title={`${post.data.title} — ${site.name}`}
+  description={post.data.description}
+>
+  <article class="post">
+    <div class="grid">
+      <p class="col-full label post-back">
+        <a class="link link-nav" href="/writing">&larr; Writing</a>
+      </p>
+
+      <header class="col-full post-head">
+        <p class="label post-meta">
+          <time datetime={post.data.date.toISOString()}>
+            {formatDate(post.data.date)}
+          </time>
+          {
+            post.data.tags.length > 0 && (
+              <>
+                <span class="post-meta-sep" aria-hidden="true">
+                  /
+                </span>
+                {post.data.tags.join(' · ')}
+              </>
+            )
+          }
+          {post.data.draft && <span class="post-draft">Draft</span>}
+        </p>
+        <h1 class="post-title">{post.data.title}</h1>
+        <p class="post-desc muted">{post.data.description}</p>
+      </header>
+
+      <div class="col-text post-body">
+        <Content />
+      </div>
+
+      {
+        headings.length > 2 && (
+          <nav class="post-toc" aria-label="On this page">
+            <p class="label post-toc-head">On this page</p>
+            <ul>
+              {headings
+                .filter((h) => h.depth === 2)
+                .map((h) => (
+                  <li>
+                    <a class="link" href={`#${h.slug}`}>
+                      {h.text}
+                    </a>
+                  </li>
+                ))}
+            </ul>
+          </nav>
+        )
+      }
+    </div>
+  </article>
+</Base>
+
+<style>
+  .post {
+    padding-block: clamp(2.5rem, 7vh, 4.5rem) clamp(4rem, 10vh, 7rem);
+  }
+
+  .post-back {
+    margin-bottom: 1.5rem;
+  }
+
+  .post-head {
+    padding-bottom: 2rem;
+    margin-bottom: 3rem;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .post-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .post-meta-sep {
+    color: var(--fg-faint);
+  }
+
+  .post-draft {
+    color: var(--accent-fg);
+    background: var(--accent);
+    padding: 0.0625rem 0.375rem;
+  }
+
+  .post-title {
+    font-size: var(--t-xl);
+    font-weight: 600;
+    letter-spacing: -0.04em;
+    margin-top: 0.875rem;
+    max-width: 20ch;
+  }
+
+  .post-desc {
+    margin-top: 1rem;
+    font-size: var(--t-md);
+    line-height: 1.5;
+    max-width: var(--measure);
+  }
+
+  /* Table of contents pinned in the right-hand columns on wide screens. */
+  .post-toc {
+    grid-column: 10 / -1;
+    grid-row: 3;
+    position: sticky;
+    top: 6rem;
+    align-self: start;
+  }
+
+  .post-toc-head {
+    color: var(--accent);
+    margin-bottom: 0.75rem;
+  }
+
+  .post-toc ul {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    gap: 0.5rem;
+    border-left: 1px solid var(--rule);
+    padding-left: 0.875rem;
+  }
+
+  .post-toc li {
+    font-size: var(--t-sm);
+    line-height: 1.4;
+  }
+
+  @media (max-width: 60rem) {
+    .post-toc {
+      grid-column: 1 / -1;
+      grid-row: auto;
+      position: static;
+      margin-bottom: 2.5rem;
+    }
+  }
+</style>
+
+<style is:global>
+  /* Prose — only inside a rendered post. */
+  .post-body > * + * {
+    margin-top: 1.25rem;
+  }
+
+  .post-body h2 {
+    font-size: var(--t-lg);
+    letter-spacing: -0.028em;
+    margin-top: 3rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--rule);
+    scroll-margin-top: 6rem;
+  }
+
+  .post-body h3 {
+    font-size: var(--t-md);
+    margin-top: 2rem;
+    scroll-margin-top: 6rem;
+  }
+
+  .post-body p,
+  .post-body li {
+    line-height: 1.65;
+  }
+
+  .post-body a {
+    color: var(--accent);
+    background-image: linear-gradient(currentColor, currentColor);
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+    background-size: 100% 1px;
+    transition: background-size var(--dur) var(--ease);
+  }
+
+  .post-body a:hover {
+    background-size: 100% 2px;
+  }
+
+  .post-body ul,
+  .post-body ol {
+    padding-left: 1.25rem;
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .post-body blockquote {
+    border-left: 2px solid var(--accent);
+    padding-left: 1.25rem;
+    color: var(--fg-muted);
+    font-style: normal;
+  }
+
+  .post-body code {
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+    background: var(--bg-sunken);
+    border: 1px solid var(--rule);
+    padding: 0.0625rem 0.3125rem;
+  }
+
+  .post-body pre {
+    padding: 1.125rem 1.25rem;
+    overflow-x: auto;
+    border: 1px solid var(--rule);
+    font-size: var(--t-sm);
+    line-height: 1.55;
+  }
+
+  .post-body pre code {
+    background: none;
+    border: 0;
+    padding: 0;
+    font-size: inherit;
+  }
+
+  /* Shiki dual-theme: swap variables when the page is dark. */
+  :root[data-theme='dark'] .post-body .astro-code,
+  :root[data-theme='dark'] .post-body .astro-code span {
+    color: var(--shiki-dark) !important;
+    background-color: var(--shiki-dark-bg) !important;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) .post-body .astro-code,
+    :root:not([data-theme='light']) .post-body .astro-code span {
+      color: var(--shiki-dark) !important;
+      background-color: var(--shiki-dark-bg) !important;
+    }
+  }
+
+  .post-body img {
+    border: 1px solid var(--rule);
+  }
+
+  .post-body hr {
+    border: 0;
+    border-top: 1px solid var(--rule);
+    margin-block: 2.5rem;
+  }
+
+  .post-body table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--t-sm);
+    display: block;
+    overflow-x: auto;
+  }
+
+  .post-body th,
+  .post-body td {
+    text-align: left;
+    padding: 0.625rem 0.875rem;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .post-body th {
+    font-family: var(--font-mono);
+    font-size: var(--t-label);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    font-weight: 500;
+  }
+</style>

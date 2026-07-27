@@ -1,0 +1,299 @@
+---
+// `honours` is not imported: the block that rendered it is commented out in
+// the template below, but an unused import of a non-existent export still
+// fails `astro check`, and therefore the build and the deploy.
+import { experience, education } from '~/data/experience';
+
+// Fixed table rather than toLocaleString: en-GB renders September as "Sept",
+// which is correct but four characters wide, and breaks the column's rhythm.
+const MONTHS = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+
+/** "2023-07" → "Jul 2023". `null` → "Present". */
+function fmt(iso: string | null): string {
+  if (!iso) return 'Present';
+  const [y, m] = iso.split('-');
+  return `${MONTHS[Number(m) - 1]} ${y}`;
+}
+---
+
+<section id="work" class="section">
+  <div class="grid">
+    <div class="col-full section-head">
+      <span class="section-num">02</span>
+      <h2 class="section-title">Where I&rsquo;ve worked</h2>
+    </div>
+
+    <ol class="col-full work-list">
+      {
+        experience.map((role, i) => (
+          <li class="work-row" data-reveal style={`--reveal-delay: ${i * 70}ms`}>
+            <div class="work-when">
+              <span class="label">{fmt(role.start)}</span>
+              <span class="work-dash" aria-hidden="true" />
+              <span class="label">{fmt(role.end)}</span>
+            </div>
+
+            {/* Company reads first: it is the recognisable thing, and job
+                titles here run to sixty characters. */}
+            <div class="work-who">
+              <h3 class="work-company">
+                {role.href ? (
+                  <a href={role.href} class="link" target="_blank" rel="noopener noreferrer">
+                    {role.company}
+                  </a>
+                ) : (
+                  role.company
+                )}
+              </h3>
+              <p class="work-title">{role.title}</p>
+              <p class="work-location muted">{role.location}</p>
+            </div>
+
+            <div class="work-what">
+              <ul class="work-points">
+                {role.points.map((p) => (
+                  <li>{p}</li>
+                ))}
+              </ul>
+              <!--ul class="tags">
+                {role.stack.map((s) => (
+                  <li class="tag mono">{s}</li>
+                ))}
+              </ul-->
+            </div>
+          </li>
+        ))
+      }
+    </ol>
+
+    <div class="col-full edu" data-reveal>
+      <h3 class="label edu-head">Education</h3>
+      <ul class="edu-list">
+        {
+          education.map((e) => (
+            <li class="edu-row">
+              <span class="label edu-when">
+                {e.start.split('-')[0]}&ndash;{e.end ? e.end.split('-')[0] : 'now'}
+              </span>
+              <span class="edu-main">
+                <strong>{e.school}</strong>
+                <span class="muted"> — {e.degree}</span>
+              </span>
+              <span class="edu-note muted">{e.note}</span>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+
+    <!--div class="col-full edu" data-reveal>
+      <h3 class="label edu-head">Also</h3>
+      <ul class="hon-list">
+        {honours.map((item) => <li class="hon-row">{item}</li>)}
+      </ul>
+    </div-->
+  </div>
+</section>
+
+<style>
+  .work-list {
+    list-style: none;
+    padding: 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  .work-row {
+    display: grid;
+    grid-template-columns: 10rem 17rem 1fr;
+    gap: var(--gutter);
+    padding-block: 2rem;
+    border-bottom: 1px solid var(--rule);
+    position: relative;
+    transition: background-color var(--dur) var(--ease);
+  }
+
+  /* Accent bar that slides in from the left on hover — restrained, precise. */
+  .work-row::before {
+    content: '';
+    position: absolute;
+    left: calc(var(--margin) * -1);
+    top: -1px;
+    bottom: -1px;
+    width: 2px;
+    background: var(--accent);
+    transform: scaleY(0);
+    transform-origin: top;
+    transition: transform var(--dur) var(--ease);
+  }
+
+  .work-row:hover::before {
+    transform: scaleY(1);
+  }
+
+  .work-when {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    padding-top: 0.3rem;
+  }
+
+  .work-dash {
+    width: 0.75rem;
+    height: 1px;
+    background: var(--rule);
+  }
+
+  .work-company {
+    font-size: var(--t-md);
+    letter-spacing: -0.022em;
+    line-height: 1.15;
+  }
+
+  /* This link sits directly above the job title, so it cannot use the usual
+     padding + negative-margin trick to grow its target: the box would reach
+     over the title, taking clicks meant for it and — because a background
+     underline is positioned against the padding box — drawing the hover rule
+     across it. So the bottom padding is real and the layout accounts for it,
+     only the top is pulled back, and background-origin keeps the underline on
+     the text. */
+  .work-company a {
+    display: inline-block;
+    padding-block: 0.6875rem;
+    margin-top: -0.6875rem;
+    background-origin: content-box;
+  }
+
+  .work-title {
+    font-size: var(--t-sm);
+    margin-top: 0.6875rem;
+    line-height: 1.35;
+    text-wrap: balance;
+  }
+
+  /* A linked company already contributes that gap as padding; without this the
+     two kinds of row would space differently. */
+  .work-company:has(a) + .work-title {
+    margin-top: 0;
+  }
+
+  .work-location {
+    font-size: var(--t-sm);
+    margin-top: 0.125rem;
+  }
+
+  .work-points {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    gap: 0.625rem;
+    max-width: var(--measure);
+  }
+
+  .work-points li {
+    position: relative;
+    padding-left: 1rem;
+    color: var(--fg-muted);
+    font-size: var(--t-body);
+    line-height: 1.55;
+  }
+
+  .work-points li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.72em;
+    width: 0.375rem;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  .tags {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin-top: 1rem;
+  }
+
+  .tag {
+    font-size: 0.6875rem;
+    letter-spacing: 0.02em;
+    color: var(--fg-muted);
+    border: 1px solid var(--rule);
+    padding: 0.1875rem 0.5rem;
+    white-space: nowrap;
+  }
+
+  /* Education */
+  .edu {
+    margin-top: 3.5rem;
+  }
+
+  .edu-head {
+    color: var(--accent);
+    margin-bottom: 1rem;
+  }
+
+  .edu-list {
+    list-style: none;
+    padding: 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  .edu-row {
+    display: grid;
+    grid-template-columns: 10rem 1fr 1fr;
+    gap: var(--gutter);
+    padding-block: 1.125rem;
+    border-bottom: 1px solid var(--rule);
+    align-items: baseline;
+    font-size: var(--t-sm);
+  }
+
+  .edu-when {
+    padding-top: 0.15rem;
+  }
+
+  .hon-list {
+    list-style: none;
+    padding: 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  .hon-row {
+    position: relative;
+    padding: 1.125rem 0 1.125rem 1.5rem;
+    border-bottom: 1px solid var(--rule);
+    font-size: var(--t-sm);
+    color: var(--fg-muted);
+  }
+
+  .hon-row::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 1.75em;
+    width: 0.75rem;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  @media (max-width: 60rem) {
+    .work-row,
+    .edu-row {
+      grid-template-columns: 1fr;
+      gap: 0.625rem;
+    }
+    .work-row::before {
+      left: calc(var(--margin) * -0.5);
+    }
+    .work-when {
+      padding-top: 0;
+    }
+  }
+</style>

@@ -1,0 +1,162 @@
+---
+import { now } from '~/data/projects';
+---
+
+{
+  now && (
+    <section id="now" class="section now">
+      <div class="grid">
+        <div class="col-full section-head">
+          <span class="section-num">01</span>
+          <h2 class="section-title">What I&rsquo;m currently building</h2>
+        </div>
+
+        <div class="col-index now-side" data-reveal>
+          <span class="label now-kind">{now.kind}</span>
+          <!--span class="label">{now.year}</span-->
+        </div>
+
+        <div class="col-main now-body" data-reveal style="--reveal-delay: 80ms">
+          <h3 class="now-title">{now.title}</h3>
+          {now.subtitle && <p class="label now-subtitle">{now.subtitle}</p>}
+          <p class="now-summary">{now.summary}</p>
+
+          <ul class="now-points">
+            {/* Authored in `src/data/projects.ts`, so the inline <code> is ours. */}
+            {now.points.map((p) => (
+              <li set:html={p} />
+            ))}
+          </ul>
+
+          <!--ul class="tags">
+            {now.stack.map((s) => (
+              <li class="tag mono">{s}</li>
+            ))}
+          </ul-->
+
+          {now.links && now.links.length > 0 && (
+            <p class="now-links">
+              {now.links.map((link) => (
+                <a
+                  class="link-static"
+                  href={link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {link.label} &nearr;
+                </a>
+              ))}
+            </p>
+          )}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+<style>
+  .now-side {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .now-kind {
+    color: var(--accent);
+  }
+
+  .now-title {
+    font-size: var(--t-xl);
+    font-weight: 600;
+    letter-spacing: -0.04em;
+    line-height: 1;
+  }
+
+  .now-subtitle {
+    margin-top: 0.5rem;
+  }
+
+  .now-summary {
+    font-size: var(--t-md);
+    margin-top: 1.25rem;
+    max-width: var(--measure);
+    line-height: 1.5;
+  }
+
+  .now-points {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    gap: 1rem;
+    margin-top: 1.75rem;
+    max-width: var(--measure);
+  }
+
+  .now-points li {
+    position: relative;
+    padding-left: 1.5rem;
+    line-height: 1.6;
+    color: var(--fg-muted);
+  }
+
+  .now-points li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.72em;
+    width: 0.75rem;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  .now-points :global(code) {
+    font-family: var(--font-mono);
+    font-size: 0.8125em;
+    color: var(--fg);
+    background: var(--bg-sunken);
+    border: 1px solid var(--rule);
+    padding: 0.0625rem 0.3125rem;
+    white-space: nowrap;
+  }
+
+  .tags {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin-top: 1.75rem;
+  }
+
+  .tag {
+    font-size: 0.6875rem;
+    color: var(--fg-muted);
+    border: 1px solid var(--rule);
+    padding: 0.1875rem 0.5rem;
+    white-space: nowrap;
+  }
+
+  .now-links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 1.75rem;
+    margin-top: 1.25rem;
+    font-size: var(--t-sm);
+  }
+
+  .now-links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+  }
+
+  @media (max-width: 60rem) {
+    .now-side {
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 0.5rem 1rem;
+      margin-bottom: 1.25rem;
+    }
+  }
+</style>

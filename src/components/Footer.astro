@@ -1,0 +1,149 @@
+---
+import { site } from '~/data/site';
+---
+
+<footer id="contact" class="ftr">
+  <div class="grid">
+    <div class="col-full section-head">
+      <span class="section-num">05</span>
+      <h2 class="section-title">Get in touch</h2>
+    </div>
+
+    <div class="col-text ftr-pitch" data-reveal>
+      <p>
+        The fastest way to reach me is email, and I do actually read it.
+      </p>
+      <p class="ftr-note">
+        My CV is not posted here, ask and I&rsquo;ll send it over.
+      </p>
+    </div>
+
+    <ul class="col-full ftr-links" data-reveal>
+      {
+        site.links.map((link) => (
+          <li class="ftr-link-row">
+            <a
+              class="ftr-link"
+              href={link.href}
+              {...link.href.startsWith('http')
+                ? { target: '_blank', rel: 'me noopener noreferrer' }
+                : {}}
+            >
+              <span class="label ftr-link-label">{link.label}</span>
+              <span class="ftr-link-handle mono">{link.handle}</span>
+              <span class="ftr-link-arrow" aria-hidden="true">
+                &rarr;
+              </span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+
+    {
+      (site.footer.left || site.footer.right) && (
+        <div class="col-full ftr-base">
+          {site.footer.left && <p class="label">{site.footer.left}</p>}
+          {site.footer.right && <p class="label ftr-colophon">{site.footer.right}</p>}
+        </div>
+      )
+    }
+  </div>
+</footer>
+
+<style>
+  .ftr {
+    border-top: 1px solid var(--rule);
+    padding-block: clamp(4rem, 10vh, 8rem) 2rem;
+    background: var(--bg-sunken);
+  }
+
+  .ftr-pitch p {
+    color: var(--fg-muted);
+    max-width: var(--measure);
+  }
+
+  .ftr-note {
+    margin-top: 0.75rem;
+    font-size: var(--t-sm);
+    color: var(--fg-faint) !important;
+  }
+
+
+  .ftr-links {
+    list-style: none;
+    padding: 0;
+    margin-top: 3.5rem;
+    border-top: 1px solid var(--rule);
+  }
+
+  .ftr-link-row {
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .ftr-link {
+    display: grid;
+    grid-template-columns: 10rem 1fr auto;
+    gap: var(--gutter);
+    align-items: baseline;
+    padding-block: 1.125rem;
+    transition: color var(--dur) var(--ease);
+  }
+
+  .ftr-link:hover,
+  .ftr-link:focus-visible {
+    color: var(--accent);
+  }
+
+  .ftr-link:hover .ftr-link-label,
+  .ftr-link:focus-visible .ftr-link-label {
+    color: var(--accent);
+  }
+
+  .ftr-link-handle {
+    font-size: var(--t-sm);
+    color: var(--fg-muted);
+    transition: color var(--dur) var(--ease);
+  }
+
+  .ftr-link:hover .ftr-link-handle {
+    color: var(--fg);
+  }
+
+  .ftr-link-arrow {
+    color: var(--fg-faint);
+    transition: transform var(--dur) var(--ease);
+  }
+
+  .ftr-link:hover .ftr-link-arrow {
+    transform: translateX(0.25rem);
+  }
+
+  .ftr-base {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.5rem 1.5rem;
+    margin-top: 3.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--rule);
+    color: var(--fg-faint);
+  }
+
+  .ftr-colophon {
+    text-align: right;
+  }
+
+  @media (max-width: 60rem) {
+    .ftr-link {
+      grid-template-columns: 1fr auto;
+      gap: 0.25rem var(--gutter);
+    }
+    .ftr-link-label {
+      grid-column: 1 / -1;
+    }
+    .ftr-colophon {
+      text-align: left;
+    }
+  }
+</style>

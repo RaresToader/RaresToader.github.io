@@ -1,0 +1,264 @@
+---
+import { projects, skills } from '~/data/projects';
+---
+
+<section id="projects" class="section">
+  <div class="grid">
+    <div class="col-full section-head">
+      <span class="section-num">03</span>
+      <h2 class="section-title">Things I&rsquo;ve made</h2>
+    </div>
+
+    <p class="col-text prj-note muted" data-reveal>
+      Multiple hackathon builds and university projects, labelled as such. 
+      The ones listed below are the most interesting ones to me.
+    </p>
+
+    <ul class="col-full prj-grid">
+      {
+        projects.map((p, i) => (
+          <li class="prj" data-spotlight data-reveal style={`--reveal-delay: ${i * 70}ms`}>
+            <div class="prj-top">
+              <span class="label prj-kind">{p.kind}</span>
+              <span class="label">{p.year}</span>
+            </div>
+
+            <h3 class="prj-title">{p.title}</h3>
+            <p class="prj-summary">{p.summary}</p>
+
+            <ul class="prj-points">
+              {p.points.map((pt) => (
+                <li>{pt}</li>
+              ))}
+            </ul>
+
+            <!--ul class="tags">
+              {p.stack.map((s) => (
+                <li class="tag mono">{s}</li>
+              ))}
+            </ul-->
+
+            {p.links && p.links.length > 0 && (
+              <p class="prj-links">
+                {p.links.map((link) => (
+                  <a
+                    class="link-static"
+                    href={link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {link.label} &nearr;
+                  </a>
+                ))}
+              </p>
+            )}
+          </li>
+        ))
+      }
+    </ul>
+
+    <div class="col-full skills" data-reveal>
+      <h3 class="label skills-head">Toolbox</h3>
+      <dl class="skills-list">
+        {
+          skills.map((group) => (
+            <div class="skills-row">
+              <dt class="label">{group.group}</dt>
+              <dd class="skills-items">
+                {group.items.map((item) => (
+                  <span class="skill mono">{item}</span>
+                ))}
+              </dd>
+            </div>
+          ))
+        }
+      </dl>
+    </div>
+  </div>
+</section>
+
+<style>
+  .prj-note {
+    font-size: var(--t-sm);
+    margin-bottom: 2.5rem;
+  }
+
+  .prj-grid {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(20rem, 100%), 1fr));
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+  }
+
+  .prj {
+    background: var(--bg);
+    padding: 1.75rem;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    isolation: isolate;
+    transition: background-color var(--dur) var(--ease);
+  }
+
+  .prj:hover {
+    background: var(--bg-sunken);
+  }
+
+  /* Cursor-tracked highlight. --mx/--my are set by the spotlight handler in
+     Base.astro; without JS this layer simply never becomes visible. */
+  .prj::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 500ms var(--ease);
+    background: radial-gradient(
+      16rem 16rem at var(--mx, 50%) var(--my, 50%),
+      color-mix(in srgb, var(--accent) 11%, transparent),
+      transparent 70%
+    );
+  }
+
+  .prj[data-lit]::after {
+    opacity: 1;
+  }
+
+  .prj-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .prj-kind {
+    color: var(--accent);
+  }
+
+  .prj-title {
+    font-size: var(--t-md);
+    letter-spacing: -0.022em;
+    line-height: 1.2;
+  }
+
+  .prj-summary {
+    font-size: var(--t-sm);
+    color: var(--fg-muted);
+    margin-top: 0.625rem;
+    line-height: 1.55;
+  }
+
+  .prj-points {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    gap: 0.5rem;
+    margin-top: 1.125rem;
+  }
+
+  .prj-points li {
+    position: relative;
+    padding-left: 1rem;
+    font-size: var(--t-sm);
+    line-height: 1.5;
+  }
+
+  .prj-points li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.68em;
+    width: 0.375rem;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  .tags {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin-top: auto;
+    padding-top: 1.5rem;
+  }
+
+  .tag {
+    font-size: 0.6875rem;
+    color: var(--fg-muted);
+    border: 1px solid var(--rule);
+    padding: 0.1875rem 0.5rem;
+    white-space: nowrap;
+  }
+
+  .prj-links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 1.25rem;
+    font-size: var(--t-sm);
+    margin-top: 0.5rem;
+  }
+
+  .prj-links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+  }
+
+  /* Skills */
+  .skills {
+    margin-top: 3.5rem;
+  }
+
+  .skills-head {
+    color: var(--accent);
+    margin-bottom: 1rem;
+  }
+
+  .skills-list {
+    border-top: 1px solid var(--rule);
+    margin: 0;
+  }
+
+  .skills-row {
+    display: grid;
+    grid-template-columns: 10rem 1fr;
+    gap: var(--gutter);
+    padding-block: 1.125rem;
+    border-bottom: 1px solid var(--rule);
+    align-items: baseline;
+  }
+
+  .skills-row dt {
+    padding-top: 0.2rem;
+  }
+
+  .skills-items {
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem 0.875rem;
+  }
+
+  .skill {
+    font-size: var(--t-sm);
+    color: var(--fg-muted);
+    transition: color var(--dur) var(--ease);
+  }
+
+  .skill:hover {
+    color: var(--accent);
+  }
+
+  @media (max-width: 60rem) {
+    .skills-row {
+      grid-template-columns: 1fr;
+      gap: 0.5rem;
+    }
+  }
+</style>

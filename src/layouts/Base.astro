@@ -1,0 +1,146 @@
+---
+import '@fontsource-variable/inter';
+import '@fontsource-variable/jetbrains-mono';
+import '~/styles/global.css';
+
+// The other subsets stay lazy behind their `unicode-range`; these three are
+// certain to be needed, so these three are worth preloading. latin-ext is on
+// the list only because the ș in "Rareș" lives there — and that name is the
+// largest thing on the page, so without it the LCP element flashes in a
+// fallback face.
+import interLatin from '@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url';
+import interLatinExt from '@fontsource-variable/inter/files/inter-latin-ext-wght-normal.woff2?url';
+import monoLatin from '@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2?url';
+
+import Header from '~/components/Header.astro';
+import Footer from '~/components/Footer.astro';
+import Pulse from '~/components/fx/Pulse.astro';
+import { site } from '~/data/site';
+
+interface Props {
+  title?: string;
+  description?: string;
+  /** Path-only OG image, e.g. "/og.png". Falls back to the site default. */
+  image?: string;
+}
+
+const {
+  // `role` is optional — an empty one must not leave a dangling em dash.
+  title = site.role ? `${site.name} — ${site.role}` : site.name,
+  description = site.description,
+  image = '/og.png',
+} = Astro.props;
+
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const ogImage = new URL(image, Astro.site);
+---
+
+<html lang="en" data-theme="">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preload" as="font" type="font/woff2" href={interLatin} crossorigin />
+    <link rel="preload" as="font" type="font/woff2" href={interLatinExt} crossorigin />
+    <link rel="preload" as="font" type="font/woff2" href={monoLatin} crossorigin />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+    <link rel="alternate" type="application/rss+xml" title={site.name} href="/rss.xml" />
+    <meta name="generator" content={Astro.generator} />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <meta name="theme-color" content="#fbfbf9" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0c0c0e" media="(prefers-color-scheme: dark)" />
+
+    {/* Applied before first paint so the theme never flashes. */}
+    <script is:inline>
+      (function () {
+        var root = document.documentElement;
+        root.classList.add('js');
+        try {
+          var saved = localStorage.getItem('theme');
+          if (saved === 'light' || saved === 'dark') root.dataset.theme = saved;
+        } catch (e) {
+          /* private mode — fall back to the OS preference */
+        }
+      })();
+    </script>
+  </head>
+
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <Pulse />
+    <Header />
+    <main id="main">
+      <slot />
+    </main>
+    <Footer />
+
+    <script>
+      // Reveal on scroll. Elements start visible in CSS unless `html.js` is
+      // set, so this can only ever add motion, never hide content.
+      const reveal = () => {
+        const targets = document.querySelectorAll<HTMLElement>('[data-reveal]');
+        if (!('IntersectionObserver' in window)) {
+          targets.forEach((el) => el.classList.add('is-visible'));
+          return;
+        }
+        const io = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (!entry.isIntersecting) return;
+              entry.target.classList.add('is-visible');
+              io.unobserve(entry.target);
+            });
+          },
+          { rootMargin: '0px 0px -10% 0px', threshold: 0.05 },
+        );
+        targets.forEach((el) => io.observe(el));
+      };
+
+      // A faint highlight that follows the cursor inside a card. Purely a
+      // CSS-variable update; the gradient itself lives in the component.
+      const spotlight = () => {
+        if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+        document.querySelectorAll<HTMLElement>('[data-spotlight]').forEach((el) => {
+          let queued = false;
+          let cx = 0;
+          let cy = 0;
+
+          el.addEventListener(
+            'pointermove',
+            (e) => {
+              const r = el.getBoundingClientRect();
+              cx = e.clientX - r.left;
+              cy = e.clientY - r.top;
+              if (queued) return;
+              queued = true;
+              requestAnimationFrame(() => {
+                queued = false;
+                el.style.setProperty('--mx', `${cx}px`);
+                el.style.setProperty('--my', `${cy}px`);
+              });
+            },
+            { passive: true },
+          );
+
+          el.addEventListener('pointerenter', () => el.setAttribute('data-lit', 'true'));
+          el.addEventListener('pointerleave', () => el.removeAttribute('data-lit'));
+        });
+      };
+
+      reveal();
+      spotlight();
+    </script>
+  </body>
+</html>

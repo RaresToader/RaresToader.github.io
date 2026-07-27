@@ -1,0 +1,207 @@
+---
+import { site } from '~/data/site';
+
+// Split on the first space so the display name always follows site.name
+// rather than being typed out again here and drifting from it.
+const [given, ...restOfName] = site.name.split(' ');
+const family = restOfName.join(' ');
+---
+
+<section class="hero">
+  <div class="grid">
+    <div class="col-full hero-meta" data-reveal>
+      <span class="label">{site.location}</span>
+    </div>
+
+    {/* The two lines are separate blocks for the composition; the aria-label
+        keeps the accessible name from collapsing to "RareșToader". */}
+    <h1 class="col-full hero-name" data-reveal aria-label={site.name}>
+      <span class="hero-line" aria-hidden="true">{given}</span>
+      <span class="hero-line hero-line--indent" aria-hidden="true">{family}</span>
+    </h1>
+
+    <hr class="col-full rule hero-rule" data-reveal />
+
+    <div class="col-index hero-role" data-reveal style="--reveal-delay: 60ms">
+      {/* Both are optional: with no role, the "Currently" label would sit
+          above an empty line. */}
+      {site.role && <span class="label">Currently</span>}
+      {site.role && <p class="hero-role-text">{site.role}</p>}
+      {
+        site.status.available && (
+          <p class="hero-status">
+            <span class="hero-dot" aria-hidden="true" />
+            {site.status.text}
+          </p>
+        )
+      }
+    </div>
+
+    <div class="col-text hero-blurb" data-reveal style="--reveal-delay: 120ms">
+      <p>
+        I work on the layers most people never have to think about: networks,
+        Linux and the hardware that moves packets around. For two years I
+        helped keep <strong>Jump Trading</strong>&rsquo;s <em>low-latency
+        trading systems</em> alive in data centres around the world.
+      </p>
+      <p class="hero-blurb-second">
+        Now I&rsquo;m in Zürich doing a master&rsquo;s at ETH, majoring in Secure
+        and Reliable Systems with a minor in Systems Software. Off the clock I
+        love to play padel. Still trying to hit that perfect bandeja.
+      </p>
+
+      <div class="hero-actions">
+        <a class="btn" href={`mailto:${site.email}`}>
+          Say hello
+          <svg viewBox="0 0 16 16" aria-hidden="true"
+            ><path d="M2 4h12v8H2zM2 4.5l6 4.5 6-4.5"></path></svg
+          >
+        </a>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<style>
+  .hero {
+    padding-top: clamp(3rem, 9vh, 6rem);
+    padding-bottom: clamp(3rem, 8vh, 5rem);
+    position: relative;
+  }
+
+  .hero-meta {
+    display: flex;
+    margin-bottom: 1.25rem;
+  }
+
+  .hero-name {
+    font-size: var(--t-display);
+    font-weight: 600;
+    line-height: var(--leading-tight);
+    letter-spacing: -0.045em;
+    margin-bottom: 1.75rem;
+  }
+
+  .hero-line {
+    display: block;
+  }
+
+  /* One indented line — the asymmetry is the whole point of the composition. */
+  .hero-line--indent {
+    margin-left: clamp(0rem, 8vw, 9rem);
+    color: var(--fg-muted);
+  }
+
+  .hero-rule {
+    border-color: var(--rule-strong);
+    margin-bottom: 2rem;
+  }
+
+  .hero-role-text {
+    font-size: var(--t-md);
+    margin-top: 0.5rem;
+    letter-spacing: -0.015em;
+  }
+
+  .hero-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.875rem;
+    font-size: var(--t-sm);
+    color: var(--fg-muted);
+  }
+
+  .hero-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 60%, transparent);
+    animation: pulse 2.6s var(--ease) infinite;
+  }
+
+  @keyframes pulse {
+    0% {
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
+    }
+    70%,
+    100% {
+      box-shadow: 0 0 0 0.5rem transparent;
+    }
+  }
+
+  .hero-blurb p {
+    font-size: var(--t-md);
+    line-height: 1.55;
+    letter-spacing: -0.012em;
+  }
+
+  .hero-blurb strong {
+    font-weight: 600;
+  }
+
+  .hero-blurb em {
+    font-style: normal;
+    color: var(--accent);
+  }
+
+  .hero-blurb-second {
+    margin-top: 1rem;
+    color: var(--fg-muted);
+    font-size: var(--t-body) !important;
+  }
+
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 2rem;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6875rem 1.125rem;
+    font-size: var(--t-sm);
+    font-weight: 500;
+    background: var(--fg);
+    color: var(--bg);
+    border: 1px solid var(--fg);
+    transition: background-color var(--dur) var(--ease),
+      color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+  }
+
+  .btn svg {
+    width: 0.875rem;
+    height: 0.875rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .btn:hover,
+  .btn:focus-visible {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-fg);
+  }
+
+  .btn--ghost {
+    background: transparent;
+    color: var(--fg);
+    border-color: var(--rule-strong);
+  }
+
+
+  @media (max-width: 60rem) {
+    .hero-role {
+      margin-bottom: 1.75rem;
+    }
+  }
+</style>

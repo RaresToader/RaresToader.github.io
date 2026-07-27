@@ -1,0 +1,62 @@
+---
+import Base from '~/layouts/Base.astro';
+import { site } from '~/data/site';
+---
+
+<Base title={`Not found — ${site.name}`} description="This page does not exist.">
+  <section class="nf">
+    <div class="grid">
+      <p class="col-full label nf-code">Error 404</p>
+      <h1 class="col-full nf-title" aria-label="Nothing here">
+        <span aria-hidden="true">Nothing</span>
+        <span class="nf-indent" aria-hidden="true">here</span>
+      </h1>
+      <p class="col-text nf-body muted">
+        Either this page never existed, or it did and I moved it without leaving
+        a redirect, which is the sort of thing I would complain about if someone
+        else did it.
+      </p>
+      <p class="col-full nf-actions">
+        <a class="link-static" href="/">Back to the homepage &rarr;</a>
+      </p>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .nf {
+    padding-block: clamp(4rem, 14vh, 9rem);
+  }
+
+  .nf-code {
+    color: var(--accent);
+    margin-bottom: 1.5rem;
+  }
+
+  .nf-title {
+    font-size: var(--t-display);
+    font-weight: 600;
+    line-height: var(--leading-tight);
+    letter-spacing: -0.045em;
+  }
+
+  .nf-title span {
+    display: block;
+  }
+
+  .nf-indent {
+    margin-left: clamp(0rem, 8vw, 9rem);
+    color: var(--fg-muted);
+  }
+
+  .nf-body {
+    margin-top: 2rem;
+    font-size: var(--t-md);
+    line-height: 1.5;
+  }
+
+  .nf-actions {
+    margin-top: 2rem;
+    font-size: var(--t-sm);
+  }
+</style>

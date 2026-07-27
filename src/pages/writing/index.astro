@@ -1,0 +1,56 @@
+---
+import Base from '~/layouts/Base.astro';
+import WritingList from '~/components/WritingList.astro';
+import { site } from '~/data/site';
+---
+
+<Base
+  title={`Writing — ${site.name}`}
+  description="Notes on systems, infrastructure, and whatever I have recently been wrong about."
+>
+  <section class="wr-head">
+    <div class="grid">
+      <p class="col-full label wr-back-wrap">
+        <a class="link link-nav" href="/">&larr; Back</a>
+      </p>
+      <h1 class="col-full wr-h1">Writing</h1>
+      <p class="col-text wr-lede muted">
+        Notes on systems, infrastructure, and whatever I have recently been
+        wrong about. Infrequent by design, I would rather publish four things
+        worth reading than forty worth skimming.
+      </p>
+      <p class="col-full wr-rss">
+        <a class="link-static link-nav" href="/rss.xml">RSS</a>
+      </p>
+    </div>
+  </section>
+
+  <WritingList showSectionHead={false} />
+</Base>
+
+<style>
+  .wr-head {
+    padding-block: clamp(2.5rem, 7vh, 4.5rem) 2.5rem;
+  }
+
+  .wr-back-wrap {
+    margin-bottom: 1.5rem;
+  }
+
+  .wr-h1 {
+    font-size: var(--t-xl);
+    font-weight: 600;
+    letter-spacing: -0.04em;
+  }
+
+  .wr-lede {
+    margin-top: 1rem;
+    font-size: var(--t-md);
+    line-height: 1.5;
+  }
+
+  .wr-rss {
+    margin-top: 1.5rem;
+    font-size: var(--t-sm);
+  }
+</style>
